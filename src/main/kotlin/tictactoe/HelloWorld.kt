@@ -2,8 +2,11 @@ package tictactoe
 
 import spark.Spark.*
 
-object HelloWorld {
-    fun main(args: Array<String>) {
-        get("/hello") { req, res -> "Hello World" }
+class HelloWorld {
+    companion object {
+        @JvmStatic
+        fun main(args : Array<String>) {
+            get("/hello") { req, res -> "Hello World" }
+        }
     }
 }
