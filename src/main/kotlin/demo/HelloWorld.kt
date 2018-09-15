@@ -1,12 +1,17 @@
-package tictactoe
+package demo
 
 import spark.Spark.*
+import demo.Game
 
 class HelloWorld {
     companion object {
         @JvmStatic
         fun main(args : Array<String>) {
-            get("/hello") { req, res -> "Hello World" }
+            webSocket("/game", Game::class)
+            init()
         }
+
+
+
     }
 }
