@@ -16,7 +16,7 @@ class GameSession {
     private Player player1;
     private Player player2;
 
-    private Players playerTurn = Players.PLAYER_ONE;
+    private Player playerTurn = null;
 
     private Map moves;
 
@@ -38,16 +38,17 @@ class GameSession {
     }
 
     public String toJSON() {
-        String data = String.valueOf(new JSONObject()
+        JSONObject data = new JSONObject()
                 .put("gameId", this.gameId)
                 .put("firstPlayer", this.player1.getName())
-                .put("secondPlayer", this.player2.getName())
-                .put("playerTurn", this.playerTurn)
-                .put("moves", this.moves)
+                .put("playerTurn", this.playerTurn.getName())
+                .put("moves", this.moves);
 
-        );
-
-        return data;
+        if (this.player2 != null) {
+            data.put("secondPlayer", this.player2.getName());
+        }
+        String dataJSON = String.valueOf(data);
+        return dataJSON;
     }
 
     public void joinGame(Player player) {
@@ -60,7 +61,7 @@ class GameSession {
     }
 
     public void start() {
-        this.playerTurn = Players.PLAYER_ONE;
+        this.playerTurn = this.player1;
         this.updateClients();
     }
 
@@ -70,7 +71,15 @@ class GameSession {
     }
 
     public void makeMove(Player player, int moveIndex) {
-        this.moves.put(moveIndex, player.playerIndex);
+
+        // if player is the current Player and can play chosen index
+        if (this.playerTurn.equals(player) && this.moves.get(moveIndex).equals(null)) {
+            this.moves.put(moveIndex, player.playerIndex);
+
+            // Change player turn and update clients
+            this.playerTurn = player.equals(this.player1) ? this.player2 : this.player1;
+            this.updateClients();
+        }
     }
 
     private void resetPlays() {
@@ -84,6 +93,16 @@ class GameSession {
         this.moves.put(6, null);
         this.moves.put(7, null);
         this.moves.put(8, null);
+    }
+
+    public Player getPlayerById(String id) {
+        if (this.player1.getId().equals(id)) {
+            return this.player1;
+        } else if (this.player2.getId().equals(id)) {
+            return this.player2;
+        } else {
+            return null;
+        }
     }
 }
 

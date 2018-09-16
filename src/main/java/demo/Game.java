@@ -18,7 +18,7 @@ public class Game {
     // Store sessions if you want to, for example, broadcast a message to all users
 //    private static final Queue<Session> sessions = new ConcurrentLinkedQueue<>();
 
-    private static final GameSession[] gameSessions = {};
+    private List<GameSession> gameSessions = new ArrayList<GameSession>();
 
     @OnWebSocketConnect
     public void connected(Session session) {
@@ -45,9 +45,27 @@ public class Game {
     public void onMessageReceived(Session session, String message) throws IOException {
         JSONObject data = new JSONObject(message);
         String gameId = String.valueOf(data.get("gameId"));
+        String playerId = data.get("playerId").toString();
 
         if (gameId != null) {
-            System.out.println(gameId);
+            GameSession gameSession = this.getGameSession(gameId);
+
+            if (gameSession == null) {
+                System.out.println("Game session not found");
+                return;
+            }
+
+            Player player = gameSession.getPlayerById(playerId);
+
+            if (player == null) {
+                System.out.println("Player doesn't exist in session");
+                return;
+            }
+
+            if (data.get("action").equals("play")) {
+                int moveIndex = Integer.parseInt(data.get("move").toString());
+                gameSession.makeMove(player, moveIndex);
+            }
         }
 
         System.out.println("Got: " + message);
@@ -66,6 +84,7 @@ public class Game {
         Player player1 = new Player(playerName, 0, session);
 
         GameSession gameSession = new GameSession(player1);
+        this.gameSessions.add(gameSession);
         String data = gameSession.toJSON();
 
         this.sendMsg(session, data);
@@ -104,7 +123,7 @@ public class Game {
     }
 
     public GameSession getGameSession(String id) {
-        Optional<GameSession> currentSessionExists = Arrays.stream(this.gameSessions).filter(s -> s.getGameId().toString().equals(id)).findFirst();
+        Optional<GameSession> currentSessionExists = this.gameSessions.stream().filter(s -> s.getGameId().toString().equals(id)).findFirst();
         if (currentSessionExists.isPresent()) {
             return currentSessionExists.get();
         } else {

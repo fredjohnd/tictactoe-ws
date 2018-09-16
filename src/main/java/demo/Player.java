@@ -23,6 +23,10 @@ public class Player {
         return this.name;
     }
 
+    public UUID getId() {
+        return this.id;
+    }
+
     public void sendMessage(String message) {
         try {
             this.session.getRemote().sendString(message);
