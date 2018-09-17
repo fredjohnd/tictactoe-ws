@@ -16,7 +16,7 @@ class GameSession {
     private Player player1;
     private Player player2;
 
-    private Player playerTurn = null;
+    private int playerTurn;
 
     private Map moves;
 
@@ -35,14 +35,17 @@ class GameSession {
 
         // Add Player 1 to the game
         this.joinGame(player1);
+        this.playerTurn = player1.playerIndex;
     }
 
-    public String toJSON() {
+    public String toJSON(String action) {
         JSONObject data = new JSONObject()
                 .put("gameId", this.gameId)
+                .put("action", action)
                 .put("firstPlayer", this.player1.getName())
-                .put("playerTurn", this.playerTurn.getName())
+                .put("playerTurn", this.playerTurn)
                 .put("moves", this.moves);
+
 
         if (this.player2 != null) {
             data.put("secondPlayer", this.player2.getName());
@@ -61,25 +64,33 @@ class GameSession {
     }
 
     public void start() {
-        this.playerTurn = this.player1;
-        this.updateClients();
+        this.playerTurn = this.player1.playerIndex;
+
+        this.player1.sendMessage(this.toJSON("game_ready"));
+        this.player2.sendMessage(this.toJSON("game_ready"));
     }
 
     public void updateClients() {
-        this.player1.sendMessage(this.toJSON());
-        this.player2.sendMessage(this.toJSON());
+        this.player1.sendMessage(this.toJSON("play"));
+        this.player2.sendMessage(this.toJSON("play"));
     }
 
     public void makeMove(Player player, int moveIndex) {
 
         // if player is the current Player and can play chosen index
-        if (this.playerTurn.equals(player) && this.moves.get(moveIndex).equals(null)) {
+        if (this.playerTurn == player.playerIndex && this.moves.get(moveIndex) == null) {
             this.moves.put(moveIndex, player.playerIndex);
 
             // Change player turn and update clients
-            this.playerTurn = player.equals(this.player1) ? this.player2 : this.player1;
+            this.playerTurn = player.equals(this.player1) ? this.player2.playerIndex : this.player1.playerIndex;
+
+//            this.checkForWins()
             this.updateClients();
         }
+    }
+
+    private void checkForWins() {
+
     }
 
     private void resetPlays() {
@@ -96,9 +107,9 @@ class GameSession {
     }
 
     public Player getPlayerById(String id) {
-        if (this.player1.getId().equals(id)) {
+        if (this.player1.getId().toString().equals(id)) {
             return this.player1;
-        } else if (this.player2.getId().equals(id)) {
+        } else if (this.player2.getId().toString().equals(id)) {
             return this.player2;
         } else {
             return null;

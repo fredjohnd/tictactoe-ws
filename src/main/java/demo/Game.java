@@ -85,9 +85,10 @@ public class Game {
 
         GameSession gameSession = new GameSession(player1);
         this.gameSessions.add(gameSession);
-        String data = gameSession.toJSON();
+        String data = gameSession.toJSON("session_created");
 
-        this.sendMsg(session, data);
+        player1.sendMessage(data);
+
     }
 
     public void joinSession(Session session, Map<String, List<String>> params) {

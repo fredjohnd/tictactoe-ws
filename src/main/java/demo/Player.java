@@ -1,6 +1,7 @@
 package demo;
 
 import org.eclipse.jetty.websocket.api.Session;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -27,9 +28,14 @@ public class Player {
         return this.id;
     }
 
+
     public void sendMessage(String message) {
+
+        JSONObject data = new JSONObject(message);
+        data.put("playerId", this.id.toString());
+        String dataWithId = String.valueOf(data);
         try {
-            this.session.getRemote().sendString(message);
+            this.session.getRemote().sendString(dataWithId);
         } catch (IOException error) {
             System.out.println(error);
         }
