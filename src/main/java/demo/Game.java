@@ -62,9 +62,16 @@ public class Game {
                 return;
             }
 
+            if (!gameSession.isBothPlayersJoined()) {
+                JSONObject returnData = new JSONObject().put("action", "waiting_player");
+                player.sendMessage(String.valueOf(returnData));
+                return;
+            }
             if (data.get("action").equals("play")) {
                 int moveIndex = Integer.parseInt(data.get("move").toString());
                 gameSession.makeMove(player, moveIndex);
+            } else if (data.get("action").equals("restart")) {
+                gameSession.restart();
             }
         }
 

@@ -3,6 +3,7 @@ package demo;
 import org.eclipse.jetty.websocket.api.Session;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -13,15 +14,23 @@ class GameSession {
 
     private UUID gameId = null;
 
-    private Player player1;
-    private Player player2;
+    private Player player1 = null;
+    private Player player2 = null;
 
     private int playerTurn;
 
     private Map moves;
 
+    private final int[][] winningPatterns = new int[][] {{0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6}, {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6}};
+
+    private boolean isFinished = false;
+
     public UUID getGameId() {
         return this.gameId;
+    }
+
+    public boolean isBothPlayersJoined() {
+        return this.player1 != null && this.player2 != null;
     }
 
     public GameSession(Player player1) {
@@ -65,9 +74,16 @@ class GameSession {
 
     public void start() {
         this.playerTurn = this.player1.playerIndex;
-
+        this.resetPlays();
         this.player1.sendMessage(this.toJSON("game_ready"));
         this.player2.sendMessage(this.toJSON("game_ready"));
+    }
+
+    public void restart() {
+        this.playerTurn = this.player1.playerIndex;
+        this.resetPlays();
+        this.player1.sendMessage(this.toJSON("restart"));
+        this.player2.sendMessage(this.toJSON("restart"));
     }
 
     public void updateClients() {
@@ -84,13 +100,66 @@ class GameSession {
             // Change player turn and update clients
             this.playerTurn = player.equals(this.player1) ? this.player2.playerIndex : this.player1.playerIndex;
 
-//            this.checkForWins()
+            this.checkForWins(player);
             this.updateClients();
         }
     }
 
-    private void checkForWins() {
+    public void finishGame(boolean hasWinner, int[]winningPattern, Player winningPlayer) {
+        this.isFinished = true;
 
+        JSONObject data = new JSONObject()
+                .put("action", "finished")
+                .put("hasWinner", hasWinner)
+                .put("winningPattern", winningPattern);
+
+        if (winningPlayer != null) {
+            data.put("winningPlayer", winningPlayer.playerIndex);
+        }
+
+        this.player1.sendMessage(String.valueOf(data));
+        this.player2.sendMessage(String.valueOf(data));
+
+    }
+
+    private void checkForWins(Player player) {
+
+        boolean isWinner = false;
+        int[] winningPattern = {};
+
+        // Loop through each winningPattern
+        for (int i = 0; i < this.winningPatterns.length; i++) {
+            int[] pattern = this.winningPatterns[i];
+
+            int matchCount = 0;
+            //Loop through the 3 indexes of a pattern
+            for (int j = 0; j < pattern.length; j++) {
+                int patternIndex = pattern[j];
+                if (this.moves.get(patternIndex) == null) {
+                    break;
+                } else if( (int)this.moves.get(patternIndex) == player.playerIndex) {
+                    matchCount++;
+                } else {
+                    break;
+                }
+            }
+
+            // If all 3 numvers match we got a winner
+            if (matchCount == 3) {
+                isWinner = true;
+                winningPattern = pattern;
+
+                // Else reset matchCount and let continue with the next pattern
+            } else {
+                matchCount = 0;
+            }
+        }
+
+        if (isWinner) {
+            this.finishGame(isWinner, winningPattern, player);
+        } else if (!this.moves.values().contains(null)) {
+            this.finishGame(false, winningPattern, null);
+        }
     }
 
     private void resetPlays() {
