@@ -32,3 +32,13 @@ dependencies {
 task wrapper(type: Wrapper) {
   gradleVersion = "4.1"
 }
+
+jar {
+  manifest {
+    attributes "Main-Class": "demo.HelloWorld"
+  }
+
+  from {
+    configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+  }
+}
