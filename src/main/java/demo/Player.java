@@ -28,14 +28,14 @@ public class Player {
         return this.id;
     }
 
+    public void sendMessage(Actions action, JSONObject data) {
 
-    public void sendMessage(String message) {
-
-        JSONObject data = new JSONObject(message);
+        // Always use own playerId to data
+        data.put("action", action.ordinal());
         data.put("playerId", this.id.toString());
-        String dataWithId = String.valueOf(data);
+
         try {
-            this.session.getRemote().sendString(dataWithId);
+            this.session.getRemote().sendString(String.valueOf(data));
         } catch (IOException error) {
             System.out.println(error);
         }

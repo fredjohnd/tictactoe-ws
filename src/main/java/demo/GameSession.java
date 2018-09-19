@@ -1,5 +1,7 @@
 package demo;
 
+import demo.Util;
+
 import org.eclipse.jetty.websocket.api.Session;
 import org.json.JSONObject;
 
@@ -47,20 +49,23 @@ class GameSession {
         this.playerTurn = player1.playerIndex;
     }
 
-    public String toJSON(String action) {
+    public JSONObject toJSONObject() {
         JSONObject data = new JSONObject()
                 .put("gameId", this.gameId)
-                .put("action", action)
                 .put("firstPlayer", this.player1.getName())
                 .put("playerTurn", this.playerTurn)
                 .put("moves", this.moves);
 
-
         if (this.player2 != null) {
             data.put("secondPlayer", this.player2.getName());
         }
-        String dataJSON = String.valueOf(data);
-        return dataJSON;
+
+        return data;
+    }
+
+    public String toJSON() {
+        JSONObject data = this.toJSONObject();
+        return String.valueOf(data);
     }
 
     public void joinGame(Player player) {
@@ -75,20 +80,20 @@ class GameSession {
     public void start() {
         this.playerTurn = this.player1.playerIndex;
         this.resetPlays();
-        this.player1.sendMessage(this.toJSON("game_ready"));
-        this.player2.sendMessage(this.toJSON("game_ready"));
+        this.player1.sendMessage(Actions.GAME_READY, this.toJSONObject());
+        this.player2.sendMessage(Actions.GAME_READY, this.toJSONObject());
     }
 
     public void restart() {
         this.playerTurn = this.player1.playerIndex;
         this.resetPlays();
-        this.player1.sendMessage(this.toJSON("restart"));
-        this.player2.sendMessage(this.toJSON("restart"));
+        this.player1.sendMessage(Actions.RESTART, new JSONObject());
+        this.player2.sendMessage(Actions.RESTART, new JSONObject());
     }
 
     public void updateClients() {
-        this.player1.sendMessage(this.toJSON("play"));
-        this.player2.sendMessage(this.toJSON("play"));
+        this.player1.sendMessage(Actions.PLAY, this.toJSONObject());
+        this.player2.sendMessage(Actions.PLAY, this.toJSONObject());
     }
 
     public void makeMove(Player player, int moveIndex) {
@@ -109,7 +114,6 @@ class GameSession {
         this.isFinished = true;
 
         JSONObject data = new JSONObject()
-                .put("action", "finished")
                 .put("hasWinner", hasWinner)
                 .put("winningPattern", winningPattern);
 
@@ -117,9 +121,8 @@ class GameSession {
             data.put("winningPlayer", winningPlayer.playerIndex);
         }
 
-        this.player1.sendMessage(String.valueOf(data));
-        this.player2.sendMessage(String.valueOf(data));
-
+        this.player1.sendMessage(Actions.FINISHED, data);
+        this.player2.sendMessage(Actions.FINISHED, data);
     }
 
     private void checkForWins(Player player) {

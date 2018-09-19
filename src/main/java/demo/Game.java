@@ -1,33 +1,25 @@
 package demo;
 
-import jdk.nashorn.internal.parser.JSONParser;
 import org.eclipse.jetty.websocket.api.*;
 import org.eclipse.jetty.websocket.api.annotations.*;
-import org.eclipse.jetty.websocket.common.WebSocketSession;
+
 import org.json.JSONObject;
-import org.json.JSONString;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Stream;
+
 
 @WebSocket
 public class Game {
-
-    // Store sessions if you want to, for example, broadcast a message to all users
-//    private static final Queue<Session> sessions = new ConcurrentLinkedQueue<>();
 
     private List<GameSession> gameSessions = new ArrayList<GameSession>();
 
     @OnWebSocketConnect
     public void connected(Session session) {
 
-        // Get query params
-        Map<String, List<String>> params = session.getUpgradeRequest().getParameterMap();
-        // Initiate new session
+        GameParams params = new GameParams(session);
 
-        if (params.get("gameId") != null) {
+        if (params.gameId != null) {
             this.joinSession(session, params);
         } else {
             this.createSession(session, params);
@@ -37,13 +29,13 @@ public class Game {
 
     @OnWebSocketClose
     public void closed(Session session, int statusCode, String reason) {
-
         //sessions.remove(session);
     }
 
     @OnWebSocketMessage
     public void onMessageReceived(Session session, String message) throws IOException {
         JSONObject data = new JSONObject(message);
+
         String gameId = String.valueOf(data.get("gameId"));
         String playerId = data.get("playerId").toString();
 
@@ -63,14 +55,14 @@ public class Game {
             }
 
             if (!gameSession.isBothPlayersJoined()) {
-                JSONObject returnData = new JSONObject().put("action", "waiting_player");
-                player.sendMessage(String.valueOf(returnData));
+                player.sendMessage(Actions.WAITING_PLAYER, new JSONObject());
                 return;
             }
-            if (data.get("action").equals("play")) {
+
+            if (this.isAction(Actions.PLAY, data.get("action"))) {
                 int moveIndex = Integer.parseInt(data.get("move").toString());
                 gameSession.makeMove(player, moveIndex);
-            } else if (data.get("action").equals("restart")) {
+            } else if (this.isAction(Actions.RESTART, data.get("action"))) {
                 gameSession.restart();
             }
         }
@@ -78,29 +70,29 @@ public class Game {
         System.out.println("Got: " + message);
     }
 
-    public void createSession(Session session, Map<String, List<String>> params) {
+    public void createSession(Session session, GameParams params) {
 
         // Check if name supplied
-        if (!params.containsKey("name")) {
+        if (params.name.isEmpty()) {
             String data = String.valueOf(new JSONObject().put("error", "No name specified"));
-            this.sendMsg(session, data);
+            this.sendSessionMessage(session, data);
             return;
         }
 
-        String playerName = params.get("name").get(0);
+        String playerName = params.name;
         Player player1 = new Player(playerName, 0, session);
 
         GameSession gameSession = new GameSession(player1);
         this.gameSessions.add(gameSession);
-        String data = gameSession.toJSON("session_created");
 
-        player1.sendMessage(data);
+        JSONObject data = gameSession.toJSONObject();
+        player1.sendMessage(Actions.SESSION_CREATED, data);
 
     }
 
-    public void joinSession(Session session, Map<String, List<String>> params) {
-        String gameId = params.get("gameId").get(0);
-        String playerName = params.get("name").get(0);
+    public void joinSession(Session session, GameParams params) {
+        String gameId = params.gameId;
+        String playerName = params.name;
 
         System.out.println(String.format("%s trying to join session with Id: %s" , playerName, gameId));
 
@@ -109,7 +101,7 @@ public class Game {
         if (gameSession == null) {
             System.out.println(String.format("Session not found with Id %s", gameId));
             String data = String.valueOf(new JSONObject().put("error", "Session not found"));
-            this.sendMsg(session, data);
+            this.sendSessionMessage(session, data);
             return;
         }
 
@@ -122,7 +114,7 @@ public class Game {
 
     }
 
-    public void sendMsg(Session session, String message) {
+    public void sendSessionMessage(Session session, String message) {
         try {
             session.getRemote().sendString(message);
         } catch (IOException error) {
@@ -137,6 +129,10 @@ public class Game {
         } else {
             return null;
         }
+    }
+
+    public boolean isAction(Actions action, Object actionIndex) {
+        return actionIndex.equals(action.ordinal());
     }
 
 }
